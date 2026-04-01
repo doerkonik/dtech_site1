@@ -5,7 +5,7 @@
 
                 {{-- Logo --}}
                 <div class="logo">
-                    <a href="http://localhost:3000/home">
+                    <a href="https://billing.gelignite.net/">
                         <img src="{{ siteLogo() }}" alt="@lang('logo')">
                     </a>
                 </div>
@@ -16,7 +16,7 @@
                         <a href="{{ route('register.domain') }}">@lang('Domain')</a>
                     </li>
                     <li>
-                        <a href="http://localhost:3000/hosting">@lang('Hosting')</a>
+                        <a href="https://dtech.gelignite.net/hosting">@lang('Hosting')</a>
                     </li>
                     <li>
                         <a href="{{ route('service.category') }}?all">@lang('VPS')</a>

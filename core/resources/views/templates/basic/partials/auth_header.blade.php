@@ -5,7 +5,7 @@
 
                 {{-- Logo --}}
                 <div class="logo">
-                    <a href="http://localhost:3000/home">
+                    <a href="https://billing.gelignite.net/">
                         <img src="{{ siteLogo() }}" alt="@lang('logo')">
                     </a>
                 </div>
