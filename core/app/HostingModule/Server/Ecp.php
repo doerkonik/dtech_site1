@@ -77,6 +77,7 @@ class Ecp implements HostingManagerInterface
                 'message' => $account
             ];
         } catch (\Exception  $error) {
+            Log::error($error->getMessage() . "\n" . $error->getTraceAsString());
             return [
                 'success' => false,
                 'message' => $error->getMessage()
@@ -523,7 +524,7 @@ class Ecp implements HostingManagerInterface
         ];
     }
 
-    protected function adminNotification($data = null, $message, $url = null)
+    protected function adminNotification($data, $message, $url = null)
     {
         $adminNotification = new AdminNotification();
         $adminNotification->user_id = @$data->user_id ?? 0;
