@@ -1,0 +1,52 @@
+{
+    "packages": [
+        {
+            "name": "nahidacm/ehbautils",
+            "version": "v2.0.1",
+            "version_normalized": "2.0.1.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/nahidacm/ehbautils.git",
+                "reference": "21be5bc667e04114776a63fef81cb9e7d52888de"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/nahidacm/ehbautils/zipball/21be5bc667e04114776a63fef81cb9e7d52888de",
+                "reference": "21be5bc667e04114776a63fef81cb9e7d52888de",
+                "shasum": ""
+            },
+            "time": "2026-03-30T01:31:59+00:00",
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "Laramin\\Utility\\UtilityServiceProvider"
+                    ]
+                }
+            },
+            "installation-source": "dist",
+            "autoload": {
+                "psr-4": {
+                    "Laramin\\Utility\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "nahidacm"
+                }
+            ],
+            "description": "Utils For EHBA",
+            "support": {
+                "issues": "https://github.com/nahidacm/ehbautils/issues",
+                "source": "https://github.com/nahidacm/ehbautils/tree/v2.0.1"
+            },
+            "install-path": "../nahidacm/ehbautils"
+        }
+    ],
+    "dev": true,
+    "dev-package-names": []
+}

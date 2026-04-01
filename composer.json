@@ -1,0 +1,5 @@
+{
+    "require": {
+        "nahidacm/ehbautils": "^2.0"
+    }
+}

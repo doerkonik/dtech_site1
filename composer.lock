@@ -1,0 +1,62 @@
+{
+    "_readme": [
+        "This file locks the dependencies of your project to a known state",
+        "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
+        "This file is @generated automatically"
+    ],
+    "content-hash": "add10a116a57d113589558a389c24b51",
+    "packages": [
+        {
+            "name": "nahidacm/ehbautils",
+            "version": "v2.0.1",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/nahidacm/ehbautils.git",
+                "reference": "21be5bc667e04114776a63fef81cb9e7d52888de"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/nahidacm/ehbautils/zipball/21be5bc667e04114776a63fef81cb9e7d52888de",
+                "reference": "21be5bc667e04114776a63fef81cb9e7d52888de",
+                "shasum": ""
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "Laramin\\Utility\\UtilityServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Laramin\\Utility\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "nahidacm"
+                }
+            ],
+            "description": "Utils For EHBA",
+            "support": {
+                "issues": "https://github.com/nahidacm/ehbautils/issues",
+                "source": "https://github.com/nahidacm/ehbautils/tree/v2.0.1"
+            },
+            "time": "2026-03-30T01:31:59+00:00"
+        }
+    ],
+    "packages-dev": [],
+    "aliases": [],
+    "minimum-stability": "stable",
+    "stability-flags": {},
+    "prefer-stable": false,
+    "prefer-lowest": false,
+    "platform": {},
+    "platform-dev": {},
+    "plugin-api-version": "2.9.0"
+}
