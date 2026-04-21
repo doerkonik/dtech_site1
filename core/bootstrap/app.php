@@ -9,6 +9,7 @@ use App\Http\Middleware\RedirectIfAdmin;
 use App\Http\Middleware\RedirectIfAuthenticated;
 use App\Http\Middleware\RedirectIfNotAdmin;
 use App\Http\Middleware\RegistrationStep;
+use App\Http\Middleware\SessionTimeout; // <-- ADD THIS
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -28,7 +29,7 @@ return Application::configure(basePath: dirname(__DIR__))
                     ->name('admin.')
                     ->group(base_path('routes/admin.php'));
 
-                    Route::middleware(['web','maintenance'])
+                Route::middleware(['web','maintenance'])
                     ->namespace('Gateway')
                     ->prefix('ipn')
                     ->name('ipn.')
@@ -36,7 +37,6 @@ return Application::configure(basePath: dirname(__DIR__))
 
                 Route::middleware(['web','maintenance'])->prefix('user')->group(base_path('routes/user.php'));
                 Route::middleware(['web','maintenance'])->group(base_path('routes/web.php'));
-
             });
         } 
     )
@@ -49,6 +49,7 @@ return Application::configure(basePath: dirname(__DIR__))
             \Illuminate\Routing\Middleware\SubstituteBindings::class,
             \App\Http\Middleware\LanguageMiddleware::class,
             \App\Http\Middleware\ActiveTemplateMiddleware::class,
+            \App\Http\Middleware\SessionTimeout::class, // <-- ADD THIS LINE
         ]);
 
         $middleware->alias([

@@ -30,7 +30,7 @@ Route::post('now-payments-hosted', 'NowPaymentsHosted\ProcessController@ipn')->n
 Route::post('now-payments-checkout', 'NowPaymentsCheckout\ProcessController@ipn')->name('NowPaymentsCheckout');
 Route::post('2checkout', 'TwoCheckout\ProcessController@ipn')->name('TwoCheckout');
 Route::any('checkout', 'Checkout\ProcessController@ipn')->name('Checkout');
-Route::post('sslcommerz', 'SslCommerz\ProcessController@ipn')->name('SslCommerz');
+Route::any('sslcommerz', 'SslCommerz\ProcessController@ipn')->name('SslCommerz');
 Route::post('aamarpay', 'Aamarpay\ProcessController@ipn')->name('Aamarpay');
 Route::get('binance', 'Binance\ProcessController@ipn')->name('Binance');
 Route::any('bkash', 'BKash\ProcessController@ipn')->name('BKash');

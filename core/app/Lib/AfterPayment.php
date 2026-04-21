@@ -26,15 +26,7 @@ class AfterPayment{
         $user->save();
 
         $invoice->status = 1; //1 means Paid
-        /**
-        * For knowing about the status 
-        * @see \App\Models\Invoice go to status method 
-        */
         $invoice->paid_date = Carbon::now(); 
-        /**
-        * updateReminder is an array for managing the invoice reminding notify process 
-        * @see \App\Models\Invoice go to updateReminder method 
-        */
         $invoice->reminder = $invoice->updateReminder();
         $invoice->save();
 
@@ -48,6 +40,9 @@ class AfterPayment{
             
             $this->serviceProcessing(@$order->hostings ?? []);
             $this->domainProcessing(@$domains ?? [], $invoice);
+
+            // ✅ FIX: Mark order as Active after all services are processed
+            $this->finalizeOrder($order);
         }
         elseif(@$invoice->hosting_id){ //When trying to pay only hosting/service invoice 
             $urlPath = urlPath('admin.order.hosting.details', @$invoice->hosting_id);
@@ -57,7 +52,7 @@ class AfterPayment{
             $urlPath = urlPath('admin.order.domain.details', @$invoice->domain_id);
             
             $invoiceItem = InvoiceItem::where('invoice_id', $invoice->id)->where('item_type', 1)->where('domain_id', $invoice->domain_id)->first();
-            $this->domainRenewProcessing($invoice->domain, $invoice, $invoiceItem); 
+            $this->domainRenewProcessing($invoice->domain, $invoiceItem); 
         }
      
         $transaction = new Transaction();
@@ -79,7 +74,14 @@ class AfterPayment{
         if($order){
             SendServiceEmail::orderNotify($invoice, $order);
         }
+    }
 
+    // ✅ NEW: Finalize order — set order to Active after payment processed
+    private function finalizeOrder($order){
+        if($order && $order->status == 2){ // 2 = Pending
+            $order->status = 1;            // 1 = Active
+            $order->save();
+        }
     }
 
     public function serviceProcessing($hostings){
@@ -97,33 +99,52 @@ class AfterPayment{
             if($product->process() == 'automation'){ 
                 $server = @$hosting->server;
                 $serverGroup = @$server->group;
-                $execute = HostingManager::init($serverGroup)->create($hosting);
-          
-                if($execute['success']){
-                    $hosting->status = 1; //1 means active
-                    /**
-                    * For knowing about the status 
-                    * @see \App\Models\Hosting go to status method 
-                    */
-                    SendServiceEmail::serviceNotify($hosting);
+
+                if($server && $serverGroup){
+                    $execute = HostingManager::init($serverGroup)->create($hosting);
+              
+                    if($execute['success']){
+                        $hosting->status = 1; //1 means active
+                        $hosting->save(); // ✅ Save FIRST so username/password exist in DB for email
+                        SendServiceEmail::serviceNotify($hosting); // ✅ then send email
+                    } else {
+                        \Log::error('AfterPayment: Hosting #' . $hosting->id . ' provisioning failed: ' . ($execute['message'] ?? 'Unknown error'));
+                        $hosting->status = 1;
+                        $hosting->save(); // ✅ Save FIRST
+                        SendServiceEmail::serviceNotify($hosting); // ✅ notify even if provisioning failed
+                    }
+                } else {
+                    // No server assigned — mark active and notify
+                    $hosting->status = 1;
+                    $hosting->save(); // ✅ Save FIRST
+                    SendServiceEmail::serviceNotify($hosting); // ✅ send email
+                    \Log::warning('AfterPayment: Hosting #' . $hosting->id . ' has no server assigned. Marked active without provisioning.');
                 }
+
+            } else {
+                // Manual product — mark active and notify
+                $hosting->status = 1;
+                $hosting->save(); // ✅ Save FIRST
+                SendServiceEmail::serviceNotify($hosting); // ✅ send email
             }
 
-            $hosting->save();
+            // ✅ hosting already saved inside each branch above — no duplicate save needed
         }
     }
 
     public function domainProcessing($domains, $invoice){
       
         foreach($domains as $domain){
-            //Finding an existing domain for renewing operation
-            $invoiceItem = InvoiceItem::where('invoice_id', $invoice->id)->where('domain_id', $domain->id)->where('item_type', 1)->where('reg_period', '!=', 0)
-            ->where('next_due_date', '!=', null)->first();
+            $invoiceItem = InvoiceItem::where('invoice_id', $invoice->id)
+                ->where('domain_id', $domain->id)
+                ->where('item_type', 1)
+                ->where('reg_period', '!=', 0)
+                ->where('next_due_date', '!=', null)
+                ->first();
 
             if(!$invoiceItem){
                 $this->domainRegister($domain);
             }
-
         } 
     } 
 
@@ -187,7 +208,7 @@ class AfterPayment{
         if(!$domain->domain_register_id){
             $domain->domain_register_id = $domainRegister->id ?? 0;
         }
-        $domain->invoice = 0; //0 means empty invoice/allow creating a new invoice
+        $domain->invoice = 0;
         $domain->save();
         
         if($general->auto_domain_register && $domainRegister){
@@ -199,21 +220,9 @@ class AfterPayment{
 
             if($execute['success']){
                 $domain->status = 1; //1 means active
-                /**
-                * For knowing about the status 
-                * @see \App\Models\Domain go to status method 
-                */
                 $domain->save();
                 SendServiceEmail::domainNotify($domain);
             }
         }
-
     }
 }
-
-
-
-
-
-
-

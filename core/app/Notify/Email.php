@@ -86,23 +86,38 @@ class Email extends NotifyProcess implements Notifiable{
 	protected function sendSmtpMail(){
 		$mail = new PHPMailer(true);
 		$config = gs('mail_config');
-        //Server settings
+
+        // Server settings
         $mail->isSMTP();
         $mail->Host       = $config->host;
         $mail->SMTPAuth   = true;
         $mail->Username   = $config->username;
         $mail->Password   = $config->password;
+
+        // ---- SSL BYPASS FIX ----
+        $mail->SMTPOptions = [
+            'ssl' => [
+                'verify_peer'       => false,
+                'verify_peer_name'  => false,
+                'allow_self_signed' => true,
+            ]
+        ];
+        // ------------------------
+
         if ($config->enc == 'ssl') {
             $mail->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;
         }else{
             $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
         }
+
         $mail->Port       = $config->port;
-        $mail->CharSet = 'UTF-8';
-        //Recipients
+        $mail->CharSet    = 'UTF-8';
+
+        // Recipients
         $mail->setFrom($this->getEmailFrom()['email'], $this->getEmailFrom()['name']);
         $mail->addAddress($this->email, $this->receiverName);
         $mail->addReplyTo($this->getEmailFrom()['email'], $this->getEmailFrom()['name']);
+
         // Content
         $mail->isHTML(true);
         $mail->Subject = $this->subject;
@@ -120,7 +135,6 @@ class Email extends NotifyProcess implements Notifiable{
 	    $response = $sendgrid->send($sendgridMail);
 	    if($response->statusCode() != 202){
 	    	throw new Exception(json_decode($response->body())->errors[0]->message);
-
 	    }
 	}
 
