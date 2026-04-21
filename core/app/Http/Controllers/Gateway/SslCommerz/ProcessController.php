@@ -4,10 +4,12 @@ namespace App\Http\Controllers\Gateway\SslCommerz;
 
 use App\Constants\Status;
 use App\Models\Deposit;
+use App\Models\User;
 use App\Http\Controllers\Gateway\PaymentController;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use App\Lib\CurlRequest;
+use Illuminate\Support\Facades\Auth;
 
 class ProcessController extends Controller
 {
@@ -28,7 +30,7 @@ class ProcessController extends Controller
         $postData['success_url']  = route('ipn.' . $alias);
         $postData['fail_url']     = $deposit->failed_url;
         $postData['cancel_url']   = $deposit->failed_url;
-        $postData['ipn_url']      = route('ipn.' . $alias); // ✅ server-to-server IPN
+        $postData['ipn_url']      = route('ipn.' . $alias);
 
         $postData['product_name']     = $deposit->product_name;
         $postData['product_category'] = $deposit->product_category;
@@ -38,16 +40,42 @@ class ProcessController extends Controller
 
         if (auth()->check()) {
             $user = auth()->user();
+
+            // ✅ Store user ID + trx in session before going to SSLCommerz
+            session([
+                'sslcommerz_user_id'  => $user->id,
+                'sslcommerz_trx'      => $deposit->trx,
+                'sslcommerz_guard'    => 'web',
+            ]);
+
             $postData['cus_name']    = $user->fullname;
             $postData['cus_email']   = $user->email;
             $postData['cus_phone']   = $user->phone;
             $postData['cus_add1']    = $user->address  ?? '';
             $postData['cus_city']    = $user->city     ?? '';
             $postData['cus_country'] = $user->country  ?? '';
+
+        } elseif (auth('admin')->check()) {
+            $admin = auth('admin')->user();
+
+            // ✅ Store admin ID + trx in session before going to SSLCommerz
+            session([
+                'sslcommerz_user_id'  => $admin->id,
+                'sslcommerz_trx'      => $deposit->trx,
+                'sslcommerz_guard'    => 'admin',
+            ]);
+
+            $postData['cus_name']    = $admin->name    ?? 'Admin';
+            $postData['cus_email']   = $admin->email   ?? '';
+            $postData['cus_phone']   = $admin->mobile  ?? '';
+            $postData['cus_add1']    = '';
+            $postData['cus_city']    = '';
+            $postData['cus_country'] = '';
         }
 
         $postData['emi_option'] = "0";
 
+        // 🌐 Sandbox — change to live URL for production
         $paymentUrl = "https://sandbox.sslcommerz.com/gwprocess/v4/api.php";
 
         $response = CurlRequest::curlPostContent($paymentUrl, $postData);
@@ -82,6 +110,32 @@ class ProcessController extends Controller
             return redirect('/')->with('error', 'Deposit not found');
         }
 
+        // ✅ Always restore session first before doing anything
+        $this->restoreSession($deposit);
+
+        // ✅ Handle GET redirect from SSLCommerz browser redirect
+        if ($request->isMethod('GET')) {
+
+            // Already paid by server IPN POST — just redirect
+            if ($deposit->status == Status::PAYMENT_SUCCESS) {
+                session()->forget(['sslcommerz_user_id', 'sslcommerz_trx', 'sslcommerz_guard']);
+                $notify[] = ['success', 'Payment completed successfully'];
+                return redirect($deposit->success_url)->withNotify($notify);
+            }
+
+            // Payment still pending — process it now from GET
+            if ($status == 'VALID' && $deposit->status == Status::PAYMENT_INITIATE) {
+                PaymentController::userDataUpdate($deposit);
+                session()->forget(['sslcommerz_user_id', 'sslcommerz_trx', 'sslcommerz_guard']);
+                $notify[] = ['success', 'Payment captured successfully'];
+                return redirect($deposit->success_url)->withNotify($notify);
+            }
+
+            $notify[] = ['error', 'Invalid request'];
+            return redirect($deposit->failed_url)->withNotify($notify);
+        }
+
+        // ✅ Handle server-to-server IPN POST
         if ($status == 'VALID' && $deposit->status == Status::PAYMENT_INITIATE) {
 
             if (isset($_POST['verify_sign']) && isset($_POST['verify_key'])) {
@@ -108,17 +162,57 @@ class ProcessController extends Controller
                 $hashString = rtrim($hashString, '&');
 
                 if (md5($hashString) == $_POST['verify_sign']) {
-
-                    // ✅ This now handles everything including order activation
                     PaymentController::userDataUpdate($deposit);
-
+                    session()->forget(['sslcommerz_user_id', 'sslcommerz_trx', 'sslcommerz_guard']);
                     $notify[] = ['success', 'Payment captured successfully'];
                     return redirect($deposit->success_url)->withNotify($notify);
                 }
             }
         }
 
+        // ✅ Already paid — safe fallback
+        if ($deposit->status == Status::PAYMENT_SUCCESS) {
+            session()->forget(['sslcommerz_user_id', 'sslcommerz_trx', 'sslcommerz_guard']);
+            $notify[] = ['success', 'Payment completed successfully'];
+            return redirect($deposit->success_url)->withNotify($notify);
+        }
+
         $notify[] = ['error', 'Invalid request'];
         return redirect($deposit->failed_url)->withNotify($notify);
+    }
+
+    /**
+     * ✅ Restore user session lost after SSLCommerz cross-site redirect
+     */
+    private function restoreSession($deposit)
+    {
+        // Already logged in — nothing to restore
+        if (Auth::check() || auth('admin')->check()) {
+            return;
+        }
+
+        $userId = session('sslcommerz_user_id');
+        $guard  = session('sslcommerz_guard', 'web');
+
+        if ($userId) {
+            if ($guard === 'admin') {
+                $admin = \App\Models\Admin::find($userId);
+                if ($admin) {
+                    Auth::guard('admin')->login($admin);
+                }
+            } else {
+                $user = User::find($userId);
+                if ($user) {
+                    Auth::login($user);
+                }
+            }
+            return;
+        }
+
+        // ✅ Fallback — restore from deposit's user_id directly
+        $user = User::find($deposit->user_id);
+        if ($user) {
+            Auth::login($user);
+        }
     }
 }
